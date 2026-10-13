@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Block Display Scale Checker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 0.5rem;
+    color: #00d4ff;
+    font-size: 1.6rem;
+  }
+  .subtitle {
+    text-align: center;
+    color: #888;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: #aaa;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  textarea {
+    width: 100%;
+    height: 200px;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+    padding: 12px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: #00d4ff; }
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+  }
+  .controls label { margin-bottom: 0; }
+  input[type="number"] {
+    width: 120px;
+    padding: 8px 12px;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-size: 1rem;
+    outline: none;
+  }
+  input[type="number"]:focus { border-color: #00d4ff; }
+  button {
+    padding: 10px 24px;
+    background: #0f3460;
+    color: #00d4ff;
+    border: 1px solid #00d4ff;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  button:hover { background: #00d4ff; color: #1a1a2e; }
+  .results {
+    margin-top: 1.5rem;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    padding: 1.2rem;
+    min-height: 100px;
+  }
+  .summary {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #0f3460;
+    flex-wrap: wrap;
+  }
+  .summary-item {
+    text-align: center;
+  }
+  .summary-item .number {
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+  .summary-item .label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .summary-item.total .number { color: #00d4ff; }
+  .summary-item.ok .number { color: #4caf50; }
+  .summary-item.bad .number { color: #ff5252; }
+  .offender {
+    background: #1a1a2e;
+    border-left: 3px solid #ff5252;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border-radius: 0 6px 6px 0;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+  }
+  .offender .idx { color: #ff5252; font-weight: 700; }
+  .offender .vals { color: #ccc; }
+  .offender .max { color: #ff5252; font-weight: 700; }
+  .no-issues {
+    color: #4caf50;
+    font-weight: 600;
+    text-align: center;
+    padding: 1rem;
+  }
+  .error-msg {
+    color: #ff9800;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    background: rgba(255, 152, 0, 0.1);
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .correction-note {
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: #666;
+    font-style: italic;
+  }
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+  .modal-overlay.open {
+    display: flex;
+  }
+  .modal-box {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    max-width: 650px;
+    width: 100%;
+    padding: 1.2rem;
+  }
+  .modal-header {
+    position: relative;
+    text-align: center;
+    margin-bottom: 0.8rem;
+  }
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #00d4ff;
+    padding: 0 1.5rem;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  a {
+    color: #00d4ff;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.35);
+    transition: color 0.2s, border-bottom-color 0.2s;
+  }
+
+  a:hover,
+  a:focus {
+    color: #7fe9ff;
+    border-bottom-color: #7fe9ff;
+    outline: none;
+  }
+
+  a:active {
+    color: #ffffff;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Block Display Scale Checker</h1>
+  <p class="subtitle">Paste a /summon command to scan all transformation matrices for excessive scale</p>
+
+  <div style="text-align: center; margin-bottom: 1rem;">
+    <button type="button" onclick="openAboutModal()">About</button>
+  </div>
+
+  <label for="commandInput">Command</label>
+  <textarea id="commandInput" placeholder="/summon block_display ~ ~ ~ {Passengers:[...]}"></textarea>
+
+  <div class="controls">
+    <label for="threshold">Scale Threshold:</label>
+    <input type="number" id="threshold" value="1000" min="0" step="1000">
+    <button onclick="runCheck()">Check Scales</button>
+  </div>
+
+  <div class="results" id="results">
+    <span style="color:#666;">Results will appear here...</span>
+  </div>
+</div>
+
+<script>
+function checkDisplayScales(command, threshold) {
+  // Find all transformation arrays in the command
+  const regex = /transformation:\s*\[([^\]]+)\]/gi;
+  const matches = [];
+  let match;
+  while ((match = regex.exec(command)) !== null) {
+    matches.push(match[1]);
+  }
+
+  if (matches.length === 0) {
+    return { error: "No transformation matrices found." };
+  }
+
+  const results = [];
+
+  for (let i = 0; i < matches.length; i++) {
+    const valuesStr = matches[i];
+    const parts = valuesStr.split(',');
+
+    if (parts.length !== 16) {
+      results.push({
+        modelIndex: i + 1,
+        error: `Expected 16 values, found ${parts.length}.`
+      });
+      continue;
+    }
+
+    const values = [];
+    let parseError = false;
+    for (let j = 0; j < parts.length; j++) {
+      const cleaned = parts[j].trim().replace(/[fF]/g, '');
+      const num = parseFloat(cleaned);
+      if (isNaN(num)) {
+        results.push({
+          modelIndex: i + 1,
+          error: `Failed to parse float at index ${j}: "${parts[j].trim()}"`
+        });
+        parseError = true;
+        break;
+      }
+      values.push(num);
+    }
+    if (parseError) continue;
+
+    // Column magnitudes of the 3x3 upper-left portion
+    // Col 0 (X): indices 0, 4, 8
+    const xScale = Math.sqrt(values[0]**2 + values[4]**2 + values[8]**2);
+    // Col 1 (Y): indices 1, 5, 9
+    const yScale = Math.sqrt(values[1]**2 + values[5]**2 + values[9]**2);
+    // Col 2 (Z): indices 2, 6, 10
+    const zScale = Math.sqrt(values[2]**2 + values[6]**2 + values[10]**2);
+
+    const rounded = {
+      x: Math.round(xScale * 100) / 100,
+      y: Math.round(yScale * 100) / 100,
+      z: Math.round(zScale * 100) / 100
+    };
+    const maxScale = Math.max(rounded.x, rounded.y, rounded.z);
+
+    results.push({
+      modelIndex: i + 1,
+      xScale: rounded.x,
+      yScale: rounded.y,
+      zScale: rounded.z,
+      maxScale: maxScale,
+      exceedsThreshold: maxScale > threshold
+    });
+  }
+
+  return { results };
+}
+
+function runCheck() {
+  const command = document.getElementById('commandInput').value;
+  const threshold = parseFloat(document.getElementById('threshold').value) || 40000;
+  const output = document.getElementById('results');
+
+  if (!command.trim()) {
+    output.innerHTML = '<span style="color:#ff9800;">Please paste a command first.</span>';
+    return;
+  }
+
+  const data = checkDisplayScales(command, threshold);
+
+  if (data.error) {
+    output.innerHTML = `<span style="color:#ff9800;">${data.error}</span>`;
+    return;
+  }
+
+  const results = data.results;
+  const totalTransforms = results.length;
+  const offenders = results.filter(r => r.exceedsThreshold);
+  const errors = results.filter(r => r.error);
+  const clean = totalTransforms - offenders.length - errors.length;
+
+  let html = '';
+
+  // Summary bar
+  html += `<div class="summary">
+    <div class="summary-item total">
+      <div class="number">${totalTransforms}</div>
+      <div class="label">Total Transforms</div>
+    </div>
+    <div class="summary-item ok">
+      <div class="number">${clean}</div>
+      <div class="label">Within Limit</div>
+    </div>
+    <div class="summary-item bad">
+      <div class="number">${offenders.length}</div>
+      <div class="label">Exceeding (&gt;${threshold.toLocaleString()})</div>
+    </div>
+  </div>`;
+
+  // Errors (if any)
+  for (const err of errors) {
+    html += `<div class="error-msg">⚠️ Transform #${err.modelIndex}: ${err.error}</div>`;
+  }
+
+  // Offenders
+  if (offenders.length > 0) {
+    for (const o of offenders) {
+      html += `<div class="offender">
+        <span class="idx">Transform #${o.modelIndex}</span> —
+        <span class="vals">X: ${o.xScale.toLocaleString()}, Y: ${o.yScale.toLocaleString()}, Z: ${o.zScale.toLocaleString()}</span> —
+        <span class="max">Max: ${o.maxScale.toLocaleString()}</span>
+      </div>`;
+    }
+  } else if (errors.length === 0) {
+    html += `<div class="no-issues">✅ All ${totalTransforms} transforms are within the limit.</div>`;
+  }
+
+  html += `<div class="correction-note">
+    Note: Reported values may differ marginally from those shown in BDE due to factors such as Grouping.
+    This tool checks the final transformation matrices present in the command, and is accurate relative to in-game.
+    </div>`;
+
+  output.innerHTML = html;
+}
+
+// Allow Ctrl+Enter to run
+document.getElementById('commandInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    runCheck();
+  }
+});
+
+function openAboutModal() {
+  document.getElementById("aboutModal").classList.add("open");
+}
+
+function closeAboutModal() {
+  document.getElementById("aboutModal").classList.remove("open");
+}
+
+function closeAboutModalIfOverlay(event) {
+  if (event.target.id === "aboutModal") {
+    closeAboutModal();
+  }
+}
+
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") {
+    closeAboutModal();
+  }
+});
+</script>
+
+<div id="aboutModal" class="modal-overlay" onclick="closeAboutModalIfOverlay(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2>About This Tool</h2>
+      <button class="modal-close" onclick="closeAboutModal()">×</button>
+    </div>
+
+    <p>
+      This website was created because a handful of goobers on BlockDisplayEngine decided it would be a truly <i>brilliant</i> idea to paint partially-empty/transparent second-layers on heads, and then scale one of the X/Y/Z values to between 10,000 and 40,000. This achieves very nice and highly detailed model pieces, at the cost of an absurd line of a display rendering several hundred blocks away from the model.<br><br>
+
+      The worst abuse of this I have seen yet is <a href="https://block-display.com/bd/299484">299484</a> "Medieval Ship", of which more than 65% (118 of 179) abuses this, resulting in a veritable army of glitchy lines rendered a few hundred or so blocks away from the model.<br><br>
+
+      Now I have to check every single model I use before pasting it in, because some people are absolute farm animals and cannot be trusted with anything.
+    </p>
+  </div>
+</div>
+</body>
+</html>
